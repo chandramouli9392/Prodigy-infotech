@@ -1,0 +1,62 @@
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report, accuracy_score
+from PIL import Image
+
+# Directory paths (update these paths based on your dataset)
+data_dir = "path_to_dataset"
+cat_dir = os.path.join(data_dir, "cats")
+dog_dir = os.path.join(data_dir, "dogs")
+
+# Parameters
+img_size = (128, 128)  # Resize all images to 128x128 pixels
+
+# Loading and preprocessing the dataset
+def load_images_from_folder(folder):
+    images = []
+    labels = []
+    for filename in os.listdir(folder):
+        try:
+            img_path = os.path.join(folder, filename)
+            img = Image.open(img_path).resize(img_size)
+            img_array = np.array(img) / 255.0  # Normalize pixel values
+            images.append(img_array)
+            labels.append(0 if "cat" in folder else 1)  # 0 for cats, 1 for dogs
+        except Exception as e:
+            print(f"Error loading image {filename}: {e}")
+    return np.array(images), np.array(labels)
+
+# Load data
+cat_images, cat_labels = load_images_from_folder(cat_dir)
+dog_images, dog_labels = load_images_from_folder(dog_dir)
+
+# Combine cat and dog data
+X = np.concatenate((cat_images, dog_images), axis=0)
+y = np.concatenate((cat_labels, dog_labels), axis=0)
+
+# Flatten images for SVM input
+X_flat = X.reshape(X.shape[0], -1)
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_flat, y, test_size=0.2, random_state=42)
+
+# Train the SVM model
+svm_model = SVC(kernel='linear', random_state=42)
+svm_model.fit(X_train, y_train)
+
+# Predictions
+y_pred = svm_model.predict(X_test)
+
+# Evaluate the model
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("Classification Report:\n", classification_report(y_test, y_pred))
+
+# Example visualization of a test image and prediction
+sample_index = 0
+sample_image = X_test[sample_index].reshape(img_size[0], img_size[1], 3)
+plt.imshow(sample_image)
+plt.title("Predicted: {} | Actual: {}".format("Dog" if y_pred[sample_index] else "Cat", "Dog" if y_test[sample_index] else "Cat"))
+plt.show()
